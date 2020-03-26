@@ -24,7 +24,9 @@
 #include <boost/asio/io_context.hpp>
 #include <boost/asio/ssl.hpp>
 #include <boost/asio/ip/udp.hpp>
+#ifndef SS_NG
 #include "authenticator.h"
+#endif
 #include "session/udpforwardsession.h"
 
 class Service {
@@ -36,7 +38,9 @@ private:
     boost::asio::io_context io_context;
     boost::asio::ip::tcp::acceptor socket_acceptor;
     boost::asio::ssl::context ssl_context;
+#ifndef SS_NG
     Authenticator *auth;
+#endif
     std::string plain_http_response;
     boost::asio::ip::udp::socket udp_socket;
     std::list<std::weak_ptr<UDPForwardSession> > udp_sessions;
@@ -49,8 +53,10 @@ public:
     void run();
     void stop();
     boost::asio::io_context &service();
+#ifndef SS_NG
     void reload_cert();
     ~Service();
+#endif
 };
 
 #endif // _SERVICE_H_

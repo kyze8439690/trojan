@@ -40,6 +40,7 @@ void Config::populate(const std::string &JSON) {
 }
 
 void Config::populate(const ptree &tree) {
+#ifndef SS_NG
     string rt = tree.get("run_type", string("client"));
     if (rt == "server") {
         run_type = SERVER;
@@ -48,10 +49,13 @@ void Config::populate(const ptree &tree) {
     } else if (rt == "nat") {
         run_type = NAT;
     } else if (rt == "client") {
+#endif
         run_type = CLIENT;
+#ifndef SS_NG
     } else {
         throw runtime_error("wrong run_type in config file");
     }
+#endif
     local_addr = tree.get("local_addr", string());
     local_port = tree.get("local_port", uint16_t());
     remote_addr = tree.get("remote_addr", string());
@@ -92,14 +96,17 @@ void Config::populate(const ptree &tree) {
     tcp.reuse_port = tree.get("tcp.reuse_port", false);
     tcp.fast_open = tree.get("tcp.fast_open", false);
     tcp.fast_open_qlen = tree.get("tcp.fast_open_qlen", 20);
+#ifndef SS_NG
     mysql.enabled = tree.get("mysql.enabled", false);
     mysql.server_addr = tree.get("mysql.server_addr", string("127.0.0.1"));
     mysql.server_port = tree.get("mysql.server_port", uint16_t(3306));
     mysql.database = tree.get("mysql.database", string("trojan"));
     mysql.username = tree.get("mysql.username", string("trojan"));
     mysql.password = tree.get("mysql.password", string());
+#endif
 }
 
+#ifndef SS_NG
 bool Config::sip003() {
     char *JSON = getenv("SS_PLUGIN_OPTIONS");
     if (JSON == NULL) {
@@ -124,6 +131,7 @@ bool Config::sip003() {
     }
     return true;
 }
+#endif
 
 string Config::SHA224(const string &message) {
     uint8_t digest[SHA224_DIGEST_LENGTH];

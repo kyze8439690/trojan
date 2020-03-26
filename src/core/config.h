@@ -28,10 +28,14 @@
 class Config {
 public:
     enum RunType {
+#ifndef SS_NG
         SERVER,
+#endif
         CLIENT,
+#ifndef SS_NG
         FORWARD,
         NAT
+#endif
     } run_type;
     std::string local_addr;
     uint16_t local_port;
@@ -70,6 +74,7 @@ public:
         bool fast_open;
         int fast_open_qlen;
     } tcp;
+#ifndef SS_NG
     class MySQLConfig {
     public:
         bool enabled;
@@ -79,9 +84,13 @@ public:
         std::string username;
         std::string password;
     } mysql;
+#endif
     void load(const std::string &filename);
     void populate(const std::string &JSON);
+
+#ifndef SS_NG
     bool sip003();
+#endif
     static std::string SHA224(const std::string &message);
 private:
     void populate(const boost::property_tree::ptree &tree);

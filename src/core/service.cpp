@@ -48,12 +48,16 @@ Service::Service(Config &config, bool test) :
     config(config),
     socket_acceptor(io_context),
     ssl_context(context::sslv23),
+#ifndef SS_NG
     auth(nullptr),
+#endif
     udp_socket(io_context) {
+#ifndef SS_NG
 #ifndef ENABLE_NAT
     if (config.run_type == Config::NAT) {
         throw runtime_error("NAT is not supported");
     }
+#endif
 #endif // ENABLE_NAT
     if (!test) {
         tcp::resolver resolver(io_context);
@@ -71,11 +75,13 @@ Service::Service(Config &config, bool test) :
 
         socket_acceptor.bind(listen_endpoint);
         socket_acceptor.listen();
+#ifndef SS_NG
         if (config.run_type == Config::FORWARD) {
             auto udp_bind_endpoint = udp::endpoint(listen_endpoint.address(), listen_endpoint.port());
             udp_socket.open(udp_bind_endpoint.protocol());
             udp_socket.bind(udp_bind_endpoint);
         }
+#endif
     }
     Log::level = config.log_level;
     auto native_context = ssl_context.native_handle();
@@ -83,6 +89,7 @@ Service::Service(Config &config, bool test) :
     if (config.ssl.curves != "") {
         SSL_CTX_set1_curves_list(native_context, config.ssl.curves.c_str());
     }
+#ifndef SS_NG
     if (config.run_type == Config::SERVER) {
         ssl_context.use_certificate_chain_file(config.ssl.cert);
         ssl_context.set_password_callback([this](size_t, context_base::password_purpose) {
@@ -129,6 +136,9 @@ Service::Service(Config &config, bool test) :
 #endif // ENABLE_MYSQL
         }
     } else {
+#else
+    {
+#endif
         if (config.ssl.sni == "") {
             config.ssl.sni = config.remote_addr;
         }
@@ -273,11 +283,14 @@ Service::Service(Config &config, bool test) :
 
 void Service::run() {
     async_accept();
+#ifndef SS_NG
     if (config.run_type == Config::FORWARD) {
         udp_async_read();
     }
+#endif
     tcp::endpoint local_endpoint = socket_acceptor.local_endpoint();
     string rt;
+#ifndef SS_NG
     if (config.run_type == Config::SERVER) {
         rt = "server";
     } else if (config.run_type == Config::FORWARD) {
@@ -285,6 +298,9 @@ void Service::run() {
     } else if (config.run_type == Config::NAT) {
         rt = "nat";
     } else {
+#else
+    {
+#endif
         rt = "client";
     }
     Log::log_with_date_time(string("trojan service (") + rt + ") started at " + local_endpoint.address().to_string() + ':' + to_string(local_endpoint.port()), Log::WARN);
@@ -304,6 +320,7 @@ void Service::stop() {
 
 void Service::async_accept() {
     shared_ptr<Session>session(nullptr);
+#ifndef SS_NG
     if (config.run_type == Config::SERVER) {
         session = make_shared<ServerSession>(config, io_context, ssl_context, auth, plain_http_response);
     } else if (config.run_type == Config::FORWARD) {
@@ -311,6 +328,9 @@ void Service::async_accept() {
     } else if (config.run_type == Config::NAT) {
         session = make_shared<NATSession>(config, io_context, ssl_context);
     } else {
+#else
+    {
+#endif
         session = make_shared<ClientSession>(config, io_context, ssl_context);
     }
     socket_acceptor.async_accept(session->accept_socket(), [this, session](const boost::system::error_code error) {
@@ -373,6 +393,7 @@ boost::asio::io_context &Service::service() {
     return io_context;
 }
 
+#ifndef SS_NG
 void Service::reload_cert() {
     if (config.run_type == Config::SERVER) {
         Log::log_with_date_time("reloading certificate and private key. . . ", Log::WARN);
@@ -393,3 +414,4 @@ Service::~Service() {
         auth = nullptr;
     }
 }
+#endif

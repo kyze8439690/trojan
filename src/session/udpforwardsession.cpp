@@ -26,6 +26,12 @@ using namespace std;
 using namespace boost::asio::ip;
 using namespace boost::asio::ssl;
 
+#ifdef SS_NG
+extern "C" {
+int protect_socket(int fd);
+}
+#endif
+
 UDPForwardSession::UDPForwardSession(const Config &config, boost::asio::io_context &io_context, context &ssl_context, const udp::endpoint &endpoint, const UDPWrite &in_write) :
     Session(config, io_context),
     status(CONNECT),
@@ -83,6 +89,12 @@ void UDPForwardSession::start() {
             out_socket.next_layer().set_option(fastopen_connect(true), ec);
         }
 #endif // TCP_FASTOPEN_CONNECT
+#ifdef SS_NG
+        // protect
+        if (protect_socket(out_socket.next_layer().native_handle()) != 0) {
+            Log::log("protect tcp socket failed", Log::ERROR);
+        }
+#endif
         out_socket.next_layer().async_connect(*iterator, [this, self](const boost::system::error_code error) {
             if (error) {
                 Log::log_with_endpoint(in_endpoint, "cannot establish connection to remote server " + config.remote_addr + ':' + to_string(config.remote_port) + ": " + error.message(), Log::ERROR);

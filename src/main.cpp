@@ -53,7 +53,9 @@ void signal_async_wait(signal_set &sig, Service &service, bool &restart) {
                 service.stop();
                 break;
             case SIGUSR1:
+#ifndef SS_NG
                 service.reload_cert();
+#endif
                 signal_async_wait(sig, service, restart);
                 break;
 #endif // _WIN32
@@ -141,9 +143,13 @@ int main(int argc, const char *argv[]) {
         Config config;
         do {
             restart = false;
+#ifndef SS_NG
             if (config.sip003()) {
                 Log::log_with_date_time("SIP003 is loaded", Log::WARN);
             } else {
+#else
+            {
+#endif
                 config.load(config_file);
             }
             Service service(config, test);
